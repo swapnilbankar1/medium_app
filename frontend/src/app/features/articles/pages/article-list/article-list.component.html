@@ -1,0 +1,28 @@
+<div class="article-list-container">
+    <div class="hero-section">
+        <h1>Discover Stories</h1>
+        <p>Read and share ideas from independent writers</p>
+    </div>
+    
+
+    <div class="container">
+        @if (isLoading) {
+        <app-loading-spinner></app-loading-spinner>
+        } @else if (errorMessage) {
+        <div class="error-message">
+            {{ errorMessage }}
+        </div>
+        } @else if (articles.length === 0) {
+        <div class="empty-state">
+            <h2>No articles yet</h2>
+            <p>Be the first to share your story!</p>
+        </div>
+        } @else {
+        <div class="articles-grid">
+            @for (article of articles; track article.id) {
+            <app-article-card [article]="article"></app-article-card>
+            }
+        </div>
+        }
+    </div>
+</div>

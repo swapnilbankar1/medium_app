@@ -1,0 +1,40 @@
+<div class="article-detail-container">
+    @if (isLoading) {
+    <app-loading-spinner></app-loading-spinner>
+    } @else if (errorMessage) {
+    <div class="container">
+        <div class="error-message">
+            {{ errorMessage }}
+        </div>
+        <button class="btn-secondary" (click)="goBack()">← Back to Articles</button>
+    </div>
+    } @else if (article) {
+    <article class="article-content">
+        <div class="container">
+            <button class="back-button" (click)="goBack()">← Back to Articles</button>
+
+            <header class="article-header">
+                <h1>{{ article.title }}</h1>
+                <div class="article-meta">
+                    <span class="date">{{ formatDate(article.created_at) }}</span>
+                    @if (article.updated_at) {
+                    <span class="updated">(Updated: {{ formatDate(article.updated_at) }})</span>
+                    }
+                </div>
+            </header>
+
+            <div class="article-body">
+                <p>{{ article.content }}</p>
+            </div>
+
+            @if (isAuthor()) {
+            <div class="article-actions">
+                <button class="btn-primary" [routerLink]="['/articles', article.id, 'edit']">
+                    Edit Article
+                </button>
+            </div>
+            }
+        </div>
+    </article>
+    }
+</div>

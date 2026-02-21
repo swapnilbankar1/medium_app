@@ -1,0 +1,10 @@
+<div class="article-card" [routerLink]="['/articles', article.id]">
+    <div class="article-header">
+        <h2 class="article-title">{{ article.title }}</h2>
+        <p class="article-date">{{ formatDate(article.created_at) }}</p>
+    </div>
+    <p class="article-preview">{{ getContentPreview() }}</p>
+    <div class="article-footer">
+        <span class="read-more">Read more →</span>
+    </div>
+</div>

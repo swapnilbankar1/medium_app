@@ -1,0 +1,52 @@
+<header class="header">
+  <div class="container">
+    <div class="header-content">
+      <a routerLink="/" class="logo">
+        <h1>Medium</h1>
+      </a>
+
+      <nav class="nav-desktop">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Home</a>
+        
+        @if (currentUser) {
+          <a routerLink="/articles/new" routerLinkActive="active" class="write-btn">Write Article</a>
+          <div class="user-menu">
+            <button class="user-button" (click)="toggleMenu()">
+              <span class="user-avatar">{{ currentUser.username.charAt(0).toUpperCase() }}</span>
+              <span class="user-name">{{ currentUser.username }}</span>
+            </button>
+            @if (isMenuOpen) {
+              <div class="dropdown-menu">
+                <a routerLink="/profile" (click)="toggleMenu()">Profile</a>
+                <button (click)="logout()">Logout</button>
+              </div>
+            }
+          </div>
+        } @else {
+          <a routerLink="/login" routerLinkActive="active" class="btn-secondary">Login</a>
+          <a routerLink="/register" routerLinkActive="active" class="btn-primary">Sign Up</a>
+        }
+      </nav>
+
+      <button class="mobile-menu-btn" (click)="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+    @if (isMenuOpen) {
+      <nav class="nav-mobile">
+        <a routerLink="/" (click)="toggleMenu()">Home</a>
+        @if (currentUser) {
+          <a routerLink="/articles/new" (click)="toggleMenu()">Write Article</a>
+          <a routerLink="/profile" (click)="toggleMenu()">Profile</a>
+          <button (click)="logout()">Logout</button>
+        } @else {
+          <a routerLink="/login" (click)="toggleMenu()">Login</a>
+          <a routerLink="/register" (click)="toggleMenu()">Sign Up</a>
+        }
+      </nav>
+    }
+  </div>
+</header>
