@@ -63,7 +63,7 @@ jobs:
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}"
-          NEW_BRANCH="integration/cherry-pick-pr-${PR_NUMBER}-${SOURCE_BRANCH}"
+          NEW_BRANCH="cp-integration/pr-${PR_NUMBER}-${SOURCE_BRANCH}"
 
           echo "new_branch=${NEW_BRANCH}" >> $GITHUB_OUTPUT
 
