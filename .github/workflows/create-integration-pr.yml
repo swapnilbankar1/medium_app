@@ -1,0 +1,126 @@
+name: Create Integration PR (Cherry-pick)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TRIGGER: When a label is added to any PR that targets the 'development'
+#          branch.  Only runs when the label name matches PROMOTE_LABEL below.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  pull_request:
+    types: [labeled]
+    branches:
+      - development
+
+env:
+  # Change this to whatever label you want to use as the trigger
+  PROMOTE_LABEL: promote-to-integration
+  # The branch to cherry-pick onto and raise the PR against
+  INTEGRATION_BRANCH: integration
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cherry-pick-to-integration:
+    name: Cherry-pick to Integration Branch
+    runs-on: ubuntu-latest
+
+    # Only run when the added label matches our promote label
+    if: github.event.label.name == 'promote-to-integration'
+
+    steps:
+      # ── 1. Checkout the full history ───────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # Full history needed for cherry-pick
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Configure Git identity ──────────────────────────────────────────
+      - name: Configure Git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # ── 3. Fetch all commits from the PR via GitHub API ────────────────────
+      - name: Get PR commit SHAs
+        id: pr_commits
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch all commit SHAs for this PR (oldest → newest)
+          COMMITS=$(gh api \
+            repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits \
+            --paginate \
+            --jq '.[].sha' | tr '\n' ' ')
+
+          echo "Commits to cherry-pick: $COMMITS"
+          echo "commits=$COMMITS" >> $GITHUB_OUTPUT
+
+      # ── 4. Create a new branch from integration ────────────────────────────
+      - name: Create cherry-pick branch from integration
+        id: new_branch
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}"
+          NEW_BRANCH="integration/cherry-pick-pr-${PR_NUMBER}-${SOURCE_BRANCH}"
+
+          echo "new_branch=${NEW_BRANCH}" >> $GITHUB_OUTPUT
+
+          git fetch origin ${{ env.INTEGRATION_BRANCH }}
+          git checkout -b "${NEW_BRANCH}" origin/${{ env.INTEGRATION_BRANCH }}
+
+      # ── 5. Cherry-pick commits ─────────────────────────────────────────────
+      - name: Cherry-pick PR commits
+        run: |
+          for SHA in ${{ steps.pr_commits.outputs.commits }}; do
+            echo "Cherry-picking $SHA ..."
+            git cherry-pick "$SHA" || {
+              echo "::error::Cherry-pick failed for commit $SHA. Resolve conflicts manually."
+              git cherry-pick --abort || true
+              exit 1
+            }
+          done
+
+      # ── 6. Push the new branch ─────────────────────────────────────────────
+      - name: Push cherry-pick branch
+        run: |
+          git push origin "${{ steps.new_branch.outputs.new_branch }}"
+
+      # ── 7. Open PR against integration ────────────────────────────────────
+      - name: Create Pull Request against integration
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ env.INTEGRATION_BRANCH }}
+          branch: ${{ steps.new_branch.outputs.new_branch }}
+          title: '[Cherry-pick] PR #${{ github.event.pull_request.number }} → ${{ env.INTEGRATION_BRANCH }}: ${{ github.event.pull_request.title }}'
+          body: |
+            ## 🍒 Cherry-pick PR
+
+            This PR was **automatically created** after the label `${{ env.PROMOTE_LABEL }}`
+            was added to PR #${{ github.event.pull_request.number }}.
+
+            ---
+
+            | Field            | Value |
+            |------------------|-------|
+            | **Source PR**    | #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }} |
+            | **Source branch**| `${{ github.event.pull_request.head.ref }}` |
+            | **Target branch**| `${{ env.INTEGRATION_BRANCH }}` |
+            | **Triggered by** | @${{ github.actor }} |
+            | **Commits cherry-picked** | `${{ steps.pr_commits.outputs.commits }}` |
+
+            ---
+
+            ### Checklist
+            - [ ] Cherry-pick applied cleanly (no conflicts)
+            - [ ] Verified on integration environment
+            - [ ] Ready to merge
+
+            ---
+            *Created by [Create Integration PR workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*
+          labels: |
+            cherry-pick
+            integration
+            automated-pr
